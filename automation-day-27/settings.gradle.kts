@@ -1,0 +1,1 @@
+rootProject.name = "automation-day-27"
