@@ -1,18 +1,14 @@
 package core;
 
-
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 
-
 public class DriverManager {
 
-
     private static final ThreadLocal<WebDriver> driver = new ThreadLocal<>();
-
 
     public static void initDriver(String browser) {
         WebDriver webDriver = null;
@@ -21,46 +17,34 @@ public class DriverManager {
                 String githubActions = System.getenv("GITHUB_ACTIONS");
                 boolean isCI = githubActions != null && githubActions.equals("true");
 
-
-                System.out.println("=== Driver Initialization ===");
-                System.out.println("Running in CI: " + isCI);
-
-
                 if (!isCI) {
-                    System.out.println("Setting up ChromeDriver via WebDriverManager");
                     WebDriverManager.chromedriver().setup();
                 } else {
-                    System.out.println("Using pre-installed ChromeDriver from CI");
                     String chromeDriverPath = System.getenv("CHROMEDRIVER_PATH");
                     if (chromeDriverPath != null && !chromeDriverPath.isEmpty()) {
                         System.setProperty("webdriver.chrome.driver", chromeDriverPath);
-                        System.out.println("ChromeDriver path set to: " + chromeDriverPath);
                     }
                 }
 
-
                 ChromeOptions options = new ChromeOptions();
 
-
+                // Disable automation flags and popups that block test
                 options.addArguments("--disable-blink-features=AutomationControlled");
-                options.addArguments("--disable-web-resources");
+                options.addArguments("--disable-save-password-bubble");  // Disable save password popup
+                options.addArguments("--disable-infobars");               // Disable "Chrome is being controlled" info bar
+                options.addArguments("--disable-notifications");          // Disable notifications
                 options.addArguments("--disable-extensions");
-                options.addArguments("--disable-plugins");
-                options.addArguments("--disable-component-extensions-with-background-pages");
+                options.addArguments("--disable-popup-blocking");
+                options.addArguments("--no-default-browser-check");
+                options.addArguments("--disable-background-networking");
                 options.setExperimentalOption("useAutomationExtension", false);
                 options.setExperimentalOption("excludeSwitches", new String[]{"enable-automation"});
 
-
                 if (isCI) {
-                    System.out.println("Configuring Chrome for CI environment");
                     String chromeBin = System.getenv("CHROME_BIN");
                     if (chromeBin != null && !chromeBin.isEmpty()) {
                         options.setBinary(chromeBin);
-                        System.out.println("Chrome binary set to: " + chromeBin);
-                    } else {
-                        System.out.println("CHROME_BIN not set, using default");
                     }
-
 
                     options.addArguments("--headless=new");
                     options.addArguments("--disable-gpu");
@@ -71,21 +55,11 @@ public class DriverManager {
                     options.addArguments("--remote-debugging-port=9222");
                     options.addArguments("--disable-software-rasterizer");
                     options.addArguments("--remote-allow-origins=*");
-                    System.out.println("Headless mode enabled with CI-specific options");
                 } else {
                     options.addArguments("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
                 }
 
-
-                try {
-                    System.out.println("Creating ChromeDriver instance...");
-                    webDriver = new ChromeDriver(options);
-                    System.out.println("ChromeDriver created successfully!");
-                } catch (Exception e) {
-                    System.err.println("Failed to create ChromeDriver: " + e.getMessage());
-                    e.printStackTrace();
-                    throw e;
-                }
+                webDriver = new ChromeDriver(options);
             }
             case "firefox" -> {
                 WebDriverManager.firefoxdriver().setup();
@@ -95,11 +69,9 @@ public class DriverManager {
         driver.set(webDriver);
     }
 
-
     public static WebDriver getDriver() {
         return driver.get();
     }
-
 
     public static void quitDriver() {
         if (driver.get() != null) {
@@ -107,6 +79,4 @@ public class DriverManager {
             driver.remove();
         }
     }
-
-
 }
